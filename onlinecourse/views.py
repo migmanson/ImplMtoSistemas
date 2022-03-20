@@ -115,13 +115,13 @@ def submit(request, course_id):
     user = request.user
     enrollment = Enrollment.objects.get(user=user, course=course)
     
-    submission = Submission(enrollment=enrollment)
+    submission = Submission.objects.create(enrollment=enrollment)
     choices = extract_answers(request)
     for choice in choices:
         submission.choices.add(choice)
     submission.save()
 
-    return HttpResponseRedirect(reverse(viewname='onlinecourse:show_exam_result', args=(submission.id,)))
+    return HttpResponseRedirect(reverse(viewname='onlinecourse:show_exam_result', args=(course_id, submission.id,)))
 
 
 # <HINT> A example method to collect the selected choices from the exam form from the request object
@@ -141,7 +141,26 @@ def extract_answers(request):
         # Get the selected choice ids from the submission record
         # For each selected choice, check if it is a correct answer or not
         # Calculate the total score
-#def show_exam_result(request, course_id, submission_id):
+def show_exam_result(request, course_id, submission_id):
+    context = {}
+    course = get_object_or_404(Course, pk=course_id)
+    submission = get_object_or_404(Submission, pk=submission_id)
 
+    # Calculate the max score and their actual score
+    max_score = 0
+    actual_score = 0
+    choices = submission.choices.all()
+    for choice in choices:
+        max_score += choice.question.grade
+        if choice.is_correct == True:
+            actual_score += choice.question.grade
 
+    # Calculate the grade
+    grade = actual_score / max_score
+    context['course'] = course
+    context['choices'] = choices
+    context['max_score'] = max_score
+    context['actual_score'] = actual_score
+    context['grade'] = grade
 
+    return render(request, 'onlinecourse/exam_result_bootstrap.html', context)
