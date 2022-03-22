@@ -50,15 +50,17 @@
     {% endif %}
     <h5 class="">Exam results</h5>
     <div class="card-columns-vertical">
-        {% for answer in choices %}
+        {% for question in questions %}
             <div class="card mt-1">
-                <div class="card-header"><h5>{{answer.question.text}}</h5></div>
+                <div class="card-header"><h5>{{question.text}}</h5></div>
                 <div class="card-body">
-                    {% for choice in answer.question.choice_set.all %}
-                        {% if choice.is_correct and choice.text == answer.text %}
+                    {% for choice in question.choice_set.all %}
+                        {% if choice.is_correct and choice in choices %}
                             <div class="text-success">Correct answer: {{choice.text}}</div>
-                        {% elif choice.is_correct and choice.text != answer.text %}
+                        {% elif choice.is_correct and choice not in choices %}
                             <div class="text-warning">Not selected: {{choice.text}}</div>
+                        {% elif not choice.is_correct and choice in choices %}
+                            <div class="text-danger">Incorrect answer: {{choice.text}}</div>
                         {% else %}
                             <div class="text-body">{{choice.text}}</div>
                         {% endif %}

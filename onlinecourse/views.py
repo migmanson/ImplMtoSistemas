@@ -116,6 +116,13 @@ def submit(request, course_id):
     enrollment = Enrollment.objects.get(user=user, course=course)
     
     submission = Submission.objects.create(enrollment=enrollment)
+
+    # Extract the questions
+    questions =  extract_questions(request)
+    for question in questions:
+        submission.questions.add(question)
+
+    # Extract the choices
     choices = extract_answers(request)
     for choice in choices:
         submission.choices.add(choice)
@@ -124,16 +131,26 @@ def submit(request, course_id):
     return HttpResponseRedirect(reverse(viewname='onlinecourse:show_exam_result', args=(course_id, submission.id,)))
 
 
+def extract_questions(request):
+    questions = []
+    for key in request.POST:
+        if key.startswith('question'):
+            value = request.POST[key]
+            question_id = int(value)
+            questions.append(question_id)
+
+    return questions
+
 # <HINT> A example method to collect the selected choices from the exam form from the request object
 def extract_answers(request):
-   submitted_answers = []
-   for key in request.POST:
-       if key.startswith('choice'):
-           value = request.POST[key]
-           choice_id = int(value)
-           submitted_answers.append(choice_id)
-   return submitted_answers
+    submitted_answers = []
+    for key in request.POST:
+        if key.startswith('choice'):
+            value = request.POST[key]
+            choice_id = int(value)
+            submitted_answers.append(choice_id)
 
+    return submitted_answers
 
 # <HINT> Create an exam result view to check if learner passed exam and show their question results and result for each question,
 # you may implement it based on the following logic:
@@ -146,14 +163,22 @@ def show_exam_result(request, course_id, submission_id):
     course = get_object_or_404(Course, pk=course_id)
     submission = get_object_or_404(Submission, pk=submission_id)
 
-    # Calculate the max score and their actual score
+    choices = submission.choices.all()
+    questions = submission.questions.all()
     max_score = 0
     actual_score = 0
-    choices = submission.choices.all()
-    for choice in choices:
-        max_score += choice.question.grade
-        if choice.is_correct == True:
-            actual_score += choice.question.grade
+    for question in questions:
+        max_score += question.grade
+        if question.is_get_score(choices):
+            actual_score += question.grade
+    # Calculate the max score and their actual score
+    # max_score = 0
+    # actual_score = 0
+    # choices = submission.choices.all()
+    # for choice in choices:
+    #     max_score += choice.question.grade
+    #     if choice.is_correct == True:
+    #         actual_score += choice.question.grade
 
     # Calculate the grade
     if max_score != 0:
@@ -161,6 +186,7 @@ def show_exam_result(request, course_id, submission_id):
     else:
         grade = 0
     context['course'] = course
+    context['questions'] = questions
     context['choices'] = choices
     context['max_score'] = max_score
     context['actual_score'] = actual_score
