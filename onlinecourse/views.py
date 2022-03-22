@@ -156,7 +156,10 @@ def show_exam_result(request, course_id, submission_id):
             actual_score += choice.question.grade
 
     # Calculate the grade
-    grade = actual_score / max_score
+    if max_score != 0:
+        grade = actual_score / max_score * 100.0
+    else:
+        grade = 0
     context['course'] = course
     context['choices'] = choices
     context['max_score'] = max_score
